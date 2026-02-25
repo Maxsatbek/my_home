@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PKB 2.0 — Персональная База Знаний</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ══ TOPBAR ══════════════════════════════════════ -->
+  <header id="topbar">
+    <div class="topbar-left">
+      <button class="btn-sidebar-toggle" id="btnSidebar" title="Скрыть/показать панель">◀</button>
+      <a class="logo" href="#" onclick="return false">
+        <div class="logo-icon">🧠</div>
+        <div>
+          <div class="logo-text">PKB 2.0</div>
+          <div class="logo-version">Knowledge Base</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="topbar-search">
+      <span class="topbar-search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Поиск по разделам, темам, заметкам, тестам…" autocomplete="off">
+    </div>
+
+    <div class="topbar-right">
+      <!-- Nav Pills -->
+      <button class="btn btn-ghost btn-sm" id="navHome" title="Главная">🏠</button>
+      <button class="btn btn-ghost btn-sm" id="navRep" title="К повторению">🔄</button>
+      <button class="btn btn-ghost btn-sm" id="navExam" title="Экзамен">🎓</button>
+
+      <div style="width:1px;height:20px;background:var(--border);flex-shrink:0"></div>
+
+      <button class="btn btn-secondary btn-sm" id="btnExport" title="Экспорт данных">⬆ Экспорт</button>
+      <button class="btn btn-secondary btn-sm" id="btnImport" title="Импорт данных">⬇ Импорт</button>
+
+      <div style="width:1px;height:20px;background:var(--border);flex-shrink:0"></div>
+
+      <button class="btn btn-ghost btn-sm btn-icon-round" id="btnTheme" title="Сменить тему">☀️</button>
+    </div>
+  </header>
+
+  <!-- ══ LAYOUT ══════════════════════════════════════ -->
+  <div id="layout">
+
+    <!-- ══ SIDEBAR ══════════════════════════════════ -->
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Разделы</div>
+        <button class="btn-add-section" id="btnAddSection">+ Добавить раздел</button>
+      </div>
+
+      <!-- Nav links -->
+      <div style="padding:8px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <button class="sidebar-nav-btn" onclick="document.getElementById('navHome').click()" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:none;border:none;border-radius:var(--radius-md);cursor:pointer;color:var(--text-secondary);font-size:12px;font-family:var(--font-ui);font-weight:500;transition:all 0.15s;width:100%;text-align:left" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--text-primary)'" onmouseout="this.style.background='none';this.style.color='var(--text-secondary)'">🏠 <span>Главная</span></button>
+          <button class="sidebar-nav-btn" onclick="document.getElementById('navRep').click()" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:none;border:none;border-radius:var(--radius-md);cursor:pointer;color:var(--text-secondary);font-size:12px;font-family:var(--font-ui);font-weight:500;transition:all 0.15s;width:100%;text-align:left" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--text-primary)'" onmouseout="this.style.background='none';this.style.color='var(--text-secondary)'">🔄 <span>К повторению</span></button>
+          <button class="sidebar-nav-btn" onclick="document.getElementById('navExam').click()" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:none;border:none;border-radius:var(--radius-md);cursor:pointer;color:var(--text-secondary);font-size:12px;font-family:var(--font-ui);font-weight:500;transition:all 0.15s;width:100%;text-align:left" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--text-primary)'" onmouseout="this.style.background='none';this.style.color='var(--text-secondary)'">🎓 <span>Экзамен</span></button>
+        </div>
+      </div>
+
+      <div class="sections-list" id="sectionsList"></div>
+    </aside>
+
+    <!-- ══ MAIN CONTENT ════════════════════════════ -->
+    <main id="main">
+      <div id="content">
+        <!-- Views are rendered here dynamically -->
+      </div>
+    </main>
+
+    <!-- ══ STATS PANEL ════════════════════════════ -->
+    <!-- <aside id="statsPanel"></aside> -->
+
+  </div>
+</div>
+
+<!-- ══ MODALS injected dynamically by JS ══════════ -->
+
+<script src="script.js"></script>
+<script>
+  // Wire up sidebar Add Section button
+  document.getElementById('btnAddSection')?.addEventListener('click', () => openSectionModal());
+</script>
+</body>
+</html>
