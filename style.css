@@ -807,8 +807,16 @@ mark { background: rgba(37,99,235,0.25); color: var(--accent-hover); border-radi
 .difficulty-stars { display: flex; gap: 3px; }
 .star-btn { background: none; border: none; font-size: 18px; cursor: pointer; transition: transform var(--transition); line-height: 1; padding: 0; }
 .star-btn:hover { transform: scale(1.2); }
-.star-btn.on { filter: none; }
-.star-btn.off { filter: grayscale(1) opacity(0.3); }
+/* .star-btn.on { filter: none; }
+.star-btn.off { filter: grayscale(1) opacity(0.3); } */
+.star-btn.on {
+  color: #ff0000;
+}
+
+.star-btn.off {
+  color: #ff0000;
+  opacity: 0.3;
+}
 
 /* ── TAGS INPUT ──────────────────────────────────── */
 .tags-container { display: flex; flex-wrap: wrap; gap: 5px; min-height: 32px; align-items: flex-start; }

@@ -1513,4 +1513,16 @@ function bindGlobalEvents() {
   $('searchInput')?.addEventListener('keydown', e => {
     if (e.key === 'Enter' && UI.searchQuery.trim()) { UI.view = 'search'; render(); }
   });
+  // Добавляем фиктивное состояние
+history.pushState(null, null, location.href);
+
+window.addEventListener("popstate", function () {
+  const confirmExit = confirm("Вы точно хотите выйти?");
+  
+  if (confirmExit) {
+    window.history.back();
+  } else {
+    history.pushState(null, null, location.href);
+  }
+});
 }
