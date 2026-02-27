@@ -736,8 +736,12 @@ mark { background: rgba(37,99,235,0.25); color: var(--accent-hover); border-radi
 .badge-medium  { background: var(--amber-bg);   color: var(--amber-text); }
 .badge-low     { background: var(--green-bg);   color: var(--green-text); }
 .badge-difficult { background: var(--red-bg);   color: var(--red-text); }
-.badge-tag     { background: var(--bg-hover);   color: var(--text-secondary); border: 1px solid var(--border); }
-
+/* .badge-tag     { background: var(--bg-hover);   color: var(--text-secondary); border: 1px solid var(--border); } */
+.badge-tag {
+  background: var(--bg-hover);
+  color: gold; /* <-- делаем звёзды желтыми */
+  border: 1px solid var(--border);
+}
 /* ── MODALS ──────────────────────────────────────── */
 .modal-overlay {
   position: fixed; inset: 0;

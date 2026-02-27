@@ -238,6 +238,40 @@ function renderTopbar() {
   if (searchEl && document.activeElement !== searchEl) searchEl.value = UI.searchQuery;
 }
 
+/* ─── СВАЙП ДЛЯ ЗАКРЫТИЯ САЙДБАРА ─── */
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  // Начало касания
+  sidebar.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  // Конец касания
+  sidebar.addEventListener('touchend', (e) => {
+    const touchEndX = e.changedTouches[0].screenX;
+    const touchEndY = e.changedTouches[0].screenY;
+    
+    const diffX = touchStartX - touchEndX; // Сдвиг по горизонтали
+    const diffY = Math.abs(touchStartY - touchEndY); // Сдвиг по вертикали
+
+    // Если сдвинули влево больше чем на 50px 
+    // и это было именно горизонтальное движение (diffX > diffY)
+    if (diffX > 50 && diffX > diffY) {
+      // Проверяем, не закрыт ли он уже
+      if (!UI.sidebarCollapsed) {
+        UI.sidebarCollapsed = true; // Устанавливаем состояние "закрыто"
+        render(); // Перерисовываем интерфейс (кнопка в TOPBAR сама поменяется на ▶)
+      }
+    }
+  }, { passive: true });
+})();
+
 /* ─── SIDEBAR ─── */
 function renderSidebar() {
   const sidebar = $('sidebar');
@@ -334,7 +368,7 @@ function renderHome() {
     <div class="view-header">
       <div>
         <div class="view-title">Главная</div>
-        <div class="view-subtitle">Добро пожаловать в вашу базу знаний</div>
+        <div class="view-subtitle">Время на исходе</div>
       </div>
       <div class="view-actions">
         <button class="btn btn-secondary btn-sm" id="btnExportHome">⬆ Экспорт</button>
@@ -599,6 +633,50 @@ function renderNotesPanel(topic, container) {
   });
 }
 
+// /* ─── LINKS PANEL ─── */
+// function renderLinksPanel(section, topic, container) {
+//   const panel = ce('div', { cls: 'tab-panel active' });
+//   panel.innerHTML = `
+//     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+//       <button class="btn btn-primary btn-sm" id="btnAddLink">+ Ссылка</button>
+//     </div>
+//     <div class="links-list" id="linksList"></div>
+//   `;
+//   container.appendChild(panel);
+
+//   $('btnAddLink')?.addEventListener('click', () => openLinkModal(section.id, topic.id));
+
+//   const list = $('linksList');
+//   const links = topic.links || [];
+//   if (!links.length) {
+//     list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔗</div><div class="empty-title">Нет ссылок</div></div>`;
+//     return;
+//   }
+//   links.forEach(link => {
+//     const isYT = link.url?.includes('youtube') || link.url?.includes('youtu.be');
+//     const card = ce('div', { cls: 'link-card' });
+//     card.innerHTML = `
+//       <span class="link-favicon">${isYT ? '▶️' : '🌐'}</span>
+//       <div class="link-info">
+//         <div class="link-title">${esc(link.title)}</div>
+//         <div class="link-url">${esc(link.url)}</div>
+//         ${link.note ? `<div class="link-note">${esc(link.note)}</div>` : ''}
+//       </div>
+//       <div class="link-actions">
+//         <a href="${esc(link.url)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Открыть ↗</a>
+//         <button class="ibtn btn-edit-link" data-lid="${link.id}">✏️</button>
+//         <button class="ibtn danger btn-del-link" data-lid="${link.id}">🗑️</button>
+//       </div>
+//     `;
+//     card.querySelector(`[data-lid="${link.id}"].btn-edit-link`)?.addEventListener('click', () => openLinkModal(section.id, topic.id, link.id));
+//     card.querySelector(`[data-lid="${link.id}"].btn-del-link`)?.addEventListener('click', () => {
+//       if (!confirm('Удалить ссылку?')) return;
+//       topic.links = links.filter(l => l.id !== link.id);
+//       saveDB(); notify('Ссылка удалена'); render();
+//     });
+//     list.appendChild(card);
+//   });
+// }
 /* ─── LINKS PANEL ─── */
 function renderLinksPanel(section, topic, container) {
   const panel = ce('div', { cls: 'tab-panel active' });
@@ -618,22 +696,29 @@ function renderLinksPanel(section, topic, container) {
     list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔗</div><div class="empty-title">Нет ссылок</div></div>`;
     return;
   }
+  
   links.forEach(link => {
     const isYT = link.url?.includes('youtube') || link.url?.includes('youtu.be');
     const card = ce('div', { cls: 'link-card' });
+    
+    // Вносим изменения здесь:
+    // 1. .link-title теперь тег <a> с атрибутами для открытия в новой вкладке
+    // 2. Из .link-actions удалена кнопка "Открыть"
     card.innerHTML = `
       <span class="link-favicon">${isYT ? '▶️' : '🌐'}</span>
       <div class="link-info">
-        <div class="link-title">${esc(link.title)}</div>
+        <a href="${esc(link.url)}" target="_blank" rel="noopener" class="link-title" style="text-decoration:none; color:inherit; cursor:pointer; display:block;">
+          ${esc(link.title)} ↗
+        </a>
         <div class="link-url">${esc(link.url)}</div>
         ${link.note ? `<div class="link-note">${esc(link.note)}</div>` : ''}
       </div>
       <div class="link-actions">
-        <a href="${esc(link.url)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Открыть ↗</a>
         <button class="ibtn btn-edit-link" data-lid="${link.id}">✏️</button>
         <button class="ibtn danger btn-del-link" data-lid="${link.id}">🗑️</button>
       </div>
     `;
+
     card.querySelector(`[data-lid="${link.id}"].btn-edit-link`)?.addEventListener('click', () => openLinkModal(section.id, topic.id, link.id));
     card.querySelector(`[data-lid="${link.id}"].btn-del-link`)?.addEventListener('click', () => {
       if (!confirm('Удалить ссылку?')) return;
@@ -643,7 +728,6 @@ function renderLinksPanel(section, topic, container) {
     list.appendChild(card);
   });
 }
-
 /* ─── TESTS PANEL ─── */
 function renderTestsPanel(section, topic, container) {
   const panel = ce('div', { cls: 'tab-panel active' });
@@ -751,7 +835,7 @@ function renderExamView() {
 }
 
 function renderExamSetup(view) {
-  const counts = [5, 10, 15, 20];
+  const counts = [10, 20, 35, 50];
   view.innerHTML = `
     <div class="view-header">
       <div><div class="view-title">🎓 Экзамен</div><div class="view-subtitle">Проверьте свои знания</div></div>
@@ -920,12 +1004,66 @@ function renderExamResult(view) {
 }
 
 /* ─── REPETITION VIEW ─── */
+// function renderRepetitionView() {
+//   let view = $('viewRep');
+//   if (!view) { view = ce('div', { id: 'viewRep', cls: 'view' }); $('content').appendChild(view); }
+//   view.classList.add('active');
+
+//   const items = getRepetitionList();
+//   view.innerHTML = `
+//     <div class="view-header">
+//       <div>
+//         <div class="view-title">🔄 К повторению</div>
+//         <div class="view-subtitle">Темы, требующие внимания · ${items.length} шт.</div>
+//       </div>
+//     </div>
+//     <div class="rep-list" id="repList"></div>
+//   `;
+
+//   const list = $('repList');
+//   if (!items.length) {
+//     list.innerHTML = `<div class="empty-state"><div class="empty-icon">🎉</div><div class="empty-title">Всё в порядке!</div><div class="empty-desc">Нет тем для повторения</div></div>`;
+//     return;
+//   }
+//   items.forEach(({ section, topic }) => {
+//     const card = ce('div', { cls: `rep-card ${topic.isDifficult?'difficult':''}` });
+//     card.innerHTML = `
+//       <div class="rep-info">
+//         <div class="rep-title">${esc(topic.title)}</div>
+//         <div class="rep-meta">
+//           <span>${esc(section.title)}</span>
+//           <span>Повторение: ${fmtDate(topic.lastReview)}</span>
+//           <span>${statusBadge(topic.status)}</span>
+//           ${topic.isDifficult ? '<span class="badge badge-difficult">⚠ Сложная</span>' : ''}
+//         </div>
+//       </div>
+//       <div class="rep-actions">
+//         <button class="btn btn-secondary btn-sm" data-open-topic="${topic.id}" data-open-section="${section.id}">Открыть</button>
+//         <button class="btn btn-success btn-xs btn-reviewed" data-tid="${topic.id}">✓ Повторено</button>
+//       </div>
+//     `;
+//     card.querySelector(`[data-open-topic="${topic.id}"]`)?.addEventListener('click', () => {
+//       UI.activeSectionId = section.id; UI.activeTopicId = topic.id; UI.view = 'topic'; render();
+//     });
+//     card.querySelector(`.btn-reviewed[data-tid="${topic.id}"]`)?.addEventListener('click', () => {
+//       topic.lastReview = today();
+//       topic.status = 'review';
+//       saveDB(); notify('Тема отмечена повторённой', 'success'); renderRepetitionView();
+//     });
+//     list.appendChild(card);
+//   });
+// }
+/* ─── REPETITION VIEW ─── */
 function renderRepetitionView() {
   let view = $('viewRep');
   if (!view) { view = ce('div', { id: 'viewRep', cls: 'view' }); $('content').appendChild(view); }
   view.classList.add('active');
 
+  // Инициализируем массив для хранения свернутых разделов, если его нет
+  if (!UI.collapsedRepSections) UI.collapsedRepSections = [];
+
   const items = getRepetitionList();
+  
   view.innerHTML = `
     <div class="view-header">
       <div>
@@ -941,32 +1079,96 @@ function renderRepetitionView() {
     list.innerHTML = `<div class="empty-state"><div class="empty-icon">🎉</div><div class="empty-title">Всё в порядке!</div><div class="empty-desc">Нет тем для повторения</div></div>`;
     return;
   }
-  items.forEach(({ section, topic }) => {
-    const card = ce('div', { cls: `rep-card ${topic.isDifficult?'difficult':''}` });
-    card.innerHTML = `
-      <div class="rep-info">
-        <div class="rep-title">${esc(topic.title)}</div>
-        <div class="rep-meta">
-          <span>${esc(section.title)}</span>
-          <span>Повторение: ${fmtDate(topic.lastReview)}</span>
-          <span>${statusBadge(topic.status)}</span>
-          ${topic.isDifficult ? '<span class="badge badge-difficult">⚠ Сложная</span>' : ''}
-        </div>
-      </div>
-      <div class="rep-actions">
-        <button class="btn btn-secondary btn-sm" data-open-topic="${topic.id}" data-open-section="${section.id}">Открыть</button>
-        <button class="btn btn-success btn-xs btn-reviewed" data-tid="${topic.id}">✓ Повторено</button>
-      </div>
-    `;
-    card.querySelector(`[data-open-topic="${topic.id}"]`)?.addEventListener('click', () => {
-      UI.activeSectionId = section.id; UI.activeTopicId = topic.id; UI.view = 'topic'; render();
-    });
-    card.querySelector(`.btn-reviewed[data-tid="${topic.id}"]`)?.addEventListener('click', () => {
-      topic.lastReview = today();
-      topic.status = 'review';
-      saveDB(); notify('Тема отмечена повторённой', 'success'); renderRepetitionView();
-    });
-    list.appendChild(card);
+
+  DB.sections.forEach(section => {
+    const sectionItems = items.filter(it => it.section.id === section.id);
+
+    if (sectionItems.length > 0) {
+      const groupWrapper = ce('div', { cls: 'rep-section-group', style: 'margin-bottom: 15px' });
+      
+      // Проверяем, был ли этот раздел свернут ранее
+      const isCurrentlyCollapsed = UI.collapsedRepSections.includes(section.id);
+
+      const header = ce('div', { 
+        style: `padding: 12px 15px; background: var(--bg-secondary); border-left: 5px solid ${section.color || 'var(--accent)'}; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 10px; user-select: none; transition: background 0.2s;` 
+      });
+      
+      header.onmouseover = () => header.style.background = 'var(--bg-hover)';
+      header.onmouseout = () => header.style.background = 'var(--bg-secondary)';
+      
+      header.innerHTML = `
+        <span class="header-arrow" style="transition: transform 0.2s; font-size: 10px; transform: ${isCurrentlyCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'}">▼</span>
+        <span>${esc(section.icon || '📁')}</span> 
+        <span style="font-weight: bold;">${esc(section.title)}</span> 
+        <span style="margin-left:auto; opacity: 0.6; font-size: 0.8em; background: var(--bg-primary); padding: 2px 8px; border-radius: 10px;">${sectionItems.length}</span>
+      `;
+
+      const cardsContainer = ce('div', { 
+        style: `transition: all 0.3s ease; overflow: hidden; display: ${isCurrentlyCollapsed ? 'none' : 'block'}` 
+      });
+
+      // Логика переключения с сохранением состояния
+      header.addEventListener('click', () => {
+        const isCollapsed = cardsContainer.style.display === 'none';
+        
+        if (isCollapsed) {
+          // Разворачиваем: удаляем ID из списка свернутых
+          cardsContainer.style.display = 'block';
+          header.querySelector('.header-arrow').style.transform = 'rotate(0deg)';
+          UI.collapsedRepSections = UI.collapsedRepSections.filter(id => id !== section.id);
+        } else {
+          // Сворачиваем: добавляем ID в список свернутых
+          cardsContainer.style.display = 'none';
+          header.querySelector('.header-arrow').style.transform = 'rotate(-90deg)';
+          if (!UI.collapsedRepSections.includes(section.id)) {
+            UI.collapsedRepSections.push(section.id);
+          }
+        }
+        // Сохраняем состояние UI, чтобы при перезагрузке оно осталось
+        if (typeof saveUIState === 'function') saveUIState();
+      });
+
+      sectionItems.forEach(({ topic }) => {
+        const card = ce('div', { cls: `rep-card ${topic.isDifficult ? 'difficult' : ''}` });
+        card.innerHTML = `
+          <div class="rep-info">
+            <div class="rep-title">${esc(topic.title)}</div>
+            <div class="rep-meta">
+              <span>Повторение: ${fmtDate(topic.lastReview)}</span>
+              <span>${statusBadge(topic.status)}</span>
+              ${topic.isDifficult ? '<span class="badge badge-difficult">⚠ Сложная</span>' : ''}
+            </div>
+          </div>
+          <div class="rep-actions">
+            <button class="btn btn-secondary btn-sm" data-open-topic="${topic.id}" data-open-section="${section.id}">Открыть</button>
+            <button class="btn btn-success btn-xs btn-reviewed" data-tid="${topic.id}">✓ Повторено</button>
+          </div>
+        `;
+
+        card.querySelector(`[data-open-topic="${topic.id}"]`)?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          UI.activeSectionId = section.id; 
+          UI.activeTopicId = topic.id; 
+          UI.view = 'topic'; 
+          render();
+        });
+
+        card.querySelector(`.btn-reviewed[data-tid="${topic.id}"]`)?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          topic.lastReview = today();
+          topic.status = 'review';
+          saveDB(); 
+          notify('Тема отмечена повторённой', 'success'); 
+          renderRepetitionView();
+        });
+
+        cardsContainer.appendChild(card);
+      });
+
+      groupWrapper.appendChild(header);
+      groupWrapper.appendChild(cardsContainer);
+      list.appendChild(groupWrapper);
+    }
   });
 }
 
@@ -1154,11 +1356,157 @@ function openSectionModal(sectionId = null) {
   $('sm_title')?.focus();
 }
 
+// /* ─── TOPIC MODAL ─── */
+// function openTopicModal(topicId = null) {
+//   const section = findSection(UI.activeSectionId);
+//   if (!section) return;
+//   const topic = topicId ? findTopic(UI.activeSectionId, topicId) : null;
+
+//   let tagsArr = [...(topic?.tags || [])];
+//   let difficulty = topic?.difficulty || 1;
+
+//   const modal = buildModal('topicModal', topic ? 'Редактировать тему' : 'Новая тема', `
+//     <div class="form-group">
+//       <label class="form-label">Название *</label>
+//       <input class="form-input" id="tm_title" value="${esc(topic?.title||'')}" placeholder="Название темы">
+//     </div>
+//     <div class="form-row">
+//       <div class="form-group">
+//         <label class="form-label">Статус</label>
+//         <select class="form-select" id="tm_status">
+//           <option value="learning" ${topic?.status==='learning'?'selected':''}>📘 Изучаю</option>
+//           <option value="review" ${topic?.status==='review'?'selected':''}>🔄 Повторить</option>
+//           <option value="done" ${topic?.status==='done'?'selected':''}>✅ Освоено</option>
+//         </select>
+//       </div>
+//       <div class="form-group">
+//         <label class="form-label">Приоритет</label>
+//         <select class="form-select" id="tm_priority">
+//           <option value="low" ${topic?.priority==='low'?'selected':''}>↓ Низкий</option>
+//           <option value="medium" ${topic?.priority==='medium'||!topic?.priority?'selected':''}>→ Средний</option>
+//           <option value="high" ${topic?.priority==='high'?'selected':''}>↑ Высокий</option>
+//         </select>
+//       </div>
+//     </div>
+//     <div class="form-row">
+//       <div class="form-group">
+//         <label class="form-label">Дата повторения</label>
+//         <input type="date" class="form-input" id="tm_lastReview" value="${topic?.lastReview||''}">
+//       </div>
+//       <div class="form-group">
+//         <label class="form-label">Дедлайн</label>
+//         <input type="date" class="form-input" id="tm_deadline" value="${topic?.deadline||''}">
+//       </div>
+//     </div>
+//     <div class="form-group">
+//       <label class="form-label">Сложность</label>
+//       <div class="difficulty-stars" id="starsWrap">
+//         ${[1,2,3,4,5].map(i=>`<button type="button" class="star-btn ${i<=difficulty?'on':'off'}" data-star="${i}">★</button>`).join('')}
+//       </div>
+//     </div>
+//     <div class="form-group">
+//       <label class="form-label">Теги</label>
+//       <div class="form-input tags-container" id="tagsContainer" style="min-height:40px;cursor:text">
+//         ${tagsArr.map(t=>`<span class="badge badge-tag">#${esc(t)}<button type="button" class="tag-remove" data-tag="${esc(t)}">×</button></span>`).join('')}
+//         <input type="text" class="tags-input-field" id="tagsInput" placeholder="Добавить тег…">
+//       </div>
+//       <div class="form-hint">Нажмите Enter или запятую для добавления тега</div>
+//     </div>
+//     <div class="form-group">
+//       <label class="form-check">
+//         <input type="checkbox" id="tm_difficult" ${topic?.isDifficult?'checked':''}>
+//         <span class="form-check-label">⚠ Пометить как сложную тему</span>
+//       </label>
+//     </div>
+//   `, () => {
+//     const title = $('tm_title').value.trim();
+//     if (!title) { notify('Введите название темы', 'error'); return; }
+//     const data = {
+//       title,
+//       status: $('tm_status').value,
+//       priority: $('tm_priority').value,
+//       lastReview: $('tm_lastReview').value || null,
+//       deadline: $('tm_deadline').value || null,
+//       difficulty,
+//       tags: tagsArr,
+//       isDifficult: $('tm_difficult').checked,
+//     };
+//     if (topic) {
+//       Object.assign(topic, data);
+//     } else {
+//       if (!section.topics) section.topics = [];
+//       section.topics.push({ id: uid(), ...data, notes: '', links: [], tests: [], testHistory: [] });
+//     }
+//     saveDB(); closeAllModals(); notify(topic ? 'Тема обновлена' : 'Тема создана', 'success'); render();
+//   });
+
+//   document.body.appendChild(modal);
+//   openModal('topicModal');
+//   $('tm_title')?.focus();
+
+//   // Stars
+//   const starsWrap = $('starsWrap');
+//   starsWrap?.querySelectorAll('.star-btn').forEach(btn => {
+//     btn.addEventListener('click', () => {
+//       difficulty = parseInt(btn.dataset.star);
+//       starsWrap.querySelectorAll('.star-btn').forEach((b,i) => {
+//         b.className = `star-btn ${i < difficulty ? 'on' : 'off'}`;
+//       });
+//     });
+//   });
+
+//   // Tags
+//   const tagsContainer = $('tagsContainer');
+//   const tagsInput = $('tagsInput');
+
+//   function refreshTags() {
+//     tagsContainer.querySelectorAll('.badge').forEach(b => b.remove());
+//     tagsArr.forEach(t => {
+//       const badge = ce('span', { cls: 'badge badge-tag' });
+//       badge.innerHTML = `#${esc(t)}<button type="button" class="tag-remove" data-tag="${esc(t)}">×</button>`;
+//       badge.querySelector('.tag-remove').addEventListener('click', () => {
+//         tagsArr = tagsArr.filter(x => x !== t);
+//         refreshTags();
+//       });
+//       tagsContainer.insertBefore(badge, tagsInput);
+//     });
+//   }
+
+//   tagsContainer?.addEventListener('click', () => tagsInput?.focus());
+//   tagsInput?.addEventListener('keydown', e => {
+//     if (e.key === 'Enter' || e.key === ',') {
+//       e.preventDefault();
+//       const val = tagsInput.value.trim().replace(/,/g,'');
+//       if (val && !tagsArr.includes(val)) { tagsArr.push(val); refreshTags(); }
+//       tagsInput.value = '';
+//     } else if (e.key === 'Backspace' && !tagsInput.value && tagsArr.length) {
+//       tagsArr.pop(); refreshTags();
+//     }
+//   });
+
+//   // Remove existing tag badges and re-render
+//   tagsContainer?.querySelectorAll('.badge').forEach(b => b.remove());
+//   refreshTags();
+// }
 /* ─── TOPIC MODAL ─── */
 function openTopicModal(topicId = null) {
   const section = findSection(UI.activeSectionId);
   if (!section) return;
   const topic = topicId ? findTopic(UI.activeSectionId, topicId) : null;
+
+  // --- РАСЧЕТ ДАТ ПО УМОЛЧАНИЮ ---
+  const now = new Date();
+  
+  // Завтра
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+  // Через 5 месяцев
+  const future = new Date(now);
+  future.setMonth(now.getMonth() + 5);
+  const deadlineStr = future.toISOString().split('T')[0];
+  // ------------------------------
 
   let tagsArr = [...(topic?.tags || [])];
   let difficulty = topic?.difficulty || 1;
@@ -1189,11 +1537,11 @@ function openTopicModal(topicId = null) {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Дата повторения</label>
-        <input type="date" class="form-input" id="tm_lastReview" value="${topic?.lastReview||''}">
+        <input type="date" class="form-input" id="tm_lastReview" value="${topic?.lastReview || tomorrowStr}">
       </div>
       <div class="form-group">
         <label class="form-label">Дедлайн</label>
-        <input type="date" class="form-input" id="tm_deadline" value="${topic?.deadline||''}">
+        <input type="date" class="form-input" id="tm_deadline" value="${topic?.deadline || deadlineStr}">
       </div>
     </div>
     <div class="form-group">
@@ -1282,11 +1630,9 @@ function openTopicModal(topicId = null) {
     }
   });
 
-  // Remove existing tag badges and re-render
   tagsContainer?.querySelectorAll('.badge').forEach(b => b.remove());
   refreshTags();
 }
-
 /* ─── LINK MODAL ─── */
 function openLinkModal(sectionId, topicId, linkId = null) {
   const topic = findTopic(sectionId, topicId);
