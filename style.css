@@ -940,3 +940,105 @@ mark { background: rgba(37,99,235,0.25); color: var(--accent-hover); border-radi
 *, *::before, *::after { transition-property: background-color, border-color, color; transition-duration: 0.18s; }
 button, input, textarea, select { transition: none; }
 button { transition: background-color 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s, transform 0.1s, opacity 0.12s; }
+.test-option.selected {
+    border-color: var(--accent); /* Ваш основной цвет темы */
+    background-color: rgba(var(--accent-rgb), 0.1); 
+    box-shadow: 0 0 0 2px var(--accent);
+}
+/* ─── НОВЫЙ ДИЗАЙН ВАРИАНТОВ ОТВЕТОВ В МОДАЛКЕ ─── */
+.modern-option-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s;
+}
+.modern-option-row:focus-within {
+  border-color: var(--accent);
+}
+
+/* Красивый чекбокс слева */
+.modern-option-checkbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.modern-option-checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+.custom-checkbox {
+  height: 24px;
+  width: 24px;
+  background-color: var(--bg-primary);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.modern-option-checkbox input:checked ~ .custom-checkbox {
+  background-color: #34d399; /* var(--green-text) если есть */
+  border-color: #34d399;
+}
+.modern-option-checkbox input:checked ~ .custom-checkbox::after {
+  content: "✓";
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Поле ввода посередине */
+.modern-option-input-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+.modern-option-input-wrapper input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 14px;
+  outline: none;
+  box-shadow: none;
+  color: var(--text-primary);
+}
+
+/* Кнопка удаления справа */
+.modern-option-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+.modern-option-delete:hover {
+  color: #ef4444; /* var(--error) */
+  background: rgba(239, 68, 68, 0.1);
+}
+
+@media (max-width: 480px) {
+  .modern-option-row {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+  .custom-checkbox { height: 20px; width: 20px; }
+  .modern-option-checkbox input:checked ~ .custom-checkbox::after { font-size: 14px; }
+}

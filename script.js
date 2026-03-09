@@ -729,11 +729,101 @@ function renderLinksPanel(section, topic, container) {
   });
 }
 /* ─── TESTS PANEL ─── */
+// function renderTestsPanel(section, topic, container) {
+//   const panel = ce('div', { cls: 'tab-panel active' });
+//   panel.innerHTML = `
+//     <div class="tests-toolbar">
+//       <button class="btn btn-success btn-sm" id="btnRunTests">▶ Пройти тест</button>
+//       <button class="btn btn-primary btn-sm" id="btnAddTest">+ Добавить вопрос</button>
+//     </div>
+//     <div class="tests-list" id="testsList"></div>
+//   `;
+//   container.appendChild(panel);
+
+//   $('btnAddTest')?.addEventListener('click', () => openTestModal(section.id, topic.id));
+//   $('btnRunTests')?.addEventListener('click', () => {
+//     // Run inline quiz — reset all questions
+//     $$('.test-option').forEach(o => {
+//       o.disabled = false;
+//       o.className = 'test-option';
+//     });
+//     $$('.test-explanation').forEach(e => e.classList.remove('visible'));
+//     notify('Тест сброшен — отвечайте на вопросы!', 'info');
+//   });
+
+//   const list = $('testsList');
+//   const tests = topic.tests || [];
+//   if (!tests.length) {
+//     list.innerHTML = `<div class="empty-state"><div class="empty-icon">❓</div><div class="empty-title">Нет вопросов</div><div class="empty-desc">Добавьте вопросы для самопроверки</div></div>`;
+//     return;
+//   }
+
+//   tests.forEach(q => {
+//     const card = ce('div', { cls: 'test-card', id: `tc_${q.id}` });
+//     const history = q.history || [];
+//     const lastAttempts = history.slice(-5);
+//     const shuffledIdx = shuffle([0,1,2,3]);
+//     const displayOptions = shuffledIdx.map(i => ({ text: q.options[i], origIdx: i }));
+//     const newCorrectIdx = displayOptions.findIndex(o => o.origIdx === q.correct);
+
+//     card.innerHTML = `
+//       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+//         <div class="test-question">${esc(q.question)}</div>
+//         <div style="display:flex;gap:3px;flex-shrink:0">
+//           <button class="ibtn btn-edit-test" data-qid="${q.id}">✏️</button>
+//           <button class="ibtn danger btn-del-test" data-qid="${q.id}">🗑️</button>
+//         </div>
+//       </div>
+//       <div class="test-options" id="opts_${q.id}"></div>
+//       <div class="test-explanation" id="expl_${q.id}">${esc(q.explanation || '')}</div>
+//       <div class="test-footer">
+//         <div class="test-history">
+//           ${lastAttempts.map(a => `<span class="test-attempt ${a.correct?'pass':'fail'}">${a.correct?'✓':'✗'}</span>`).join('')}
+//         </div>
+//         <span class="text-muted text-sm">${history.length > 0 ? Math.round(history.filter(h=>h.correct).length/history.length*100)+'% верно' : 'Нет попыток'}</span>
+//       </div>
+//     `;
+
+//     const optsDiv = card.querySelector(`#opts_${q.id}`);
+//     displayOptions.forEach((opt, dispIdx) => {
+//       const letters = ['A','B','C','D'];
+//       const btn = ce('button', { cls: 'test-option' });
+//       btn.innerHTML = `<span class="test-opt-letter">${letters[dispIdx]}</span><span class="test-opt-text">${esc(opt.text)}</span>`;
+//       btn.addEventListener('click', () => {
+//         // Disable all options
+//         optsDiv.querySelectorAll('.test-option').forEach((b, i) => {
+//           b.disabled = true;
+//           if (i === newCorrectIdx) b.classList.add('correct');
+//         });
+//         if (dispIdx !== newCorrectIdx) btn.classList.add('wrong');
+//         const correct = dispIdx === newCorrectIdx;
+//         // Save history
+//         if (!q.history) q.history = [];
+//         q.history.push({ date: today(), correct });
+//         saveDB();
+//         // Show explanation
+//         const expl = card.querySelector(`#expl_${q.id}`);
+//         if (expl && q.explanation) expl.classList.add('visible');
+//       });
+//       optsDiv.appendChild(btn);
+//     });
+
+//     card.querySelector(`.btn-edit-test[data-qid="${q.id}"]`)?.addEventListener('click', () => openTestModal(section.id, topic.id, q.id));
+//     card.querySelector(`.btn-del-test[data-qid="${q.id}"]`)?.addEventListener('click', () => {
+//       if (!confirm('Удалить вопрос?')) return;
+//       topic.tests = tests.filter(t => t.id !== q.id);
+//       saveDB(); notify('Вопрос удалён'); render();
+//     });
+
+//     list.appendChild(card);
+//   });
+// }
+/* ─── TESTS PANEL (ОБНОВЛЕННАЯ) ─── */
 function renderTestsPanel(section, topic, container) {
   const panel = ce('div', { cls: 'tab-panel active' });
   panel.innerHTML = `
     <div class="tests-toolbar">
-      <button class="btn btn-success btn-sm" id="btnRunTests">▶ Пройти тест</button>
+      <button class="btn btn-success btn-sm" id="btnRunTests">▶ Сбросить и пройти заново</button>
       <button class="btn btn-primary btn-sm" id="btnAddTest">+ Добавить вопрос</button>
     </div>
     <div class="tests-list" id="testsList"></div>
@@ -742,13 +832,8 @@ function renderTestsPanel(section, topic, container) {
 
   $('btnAddTest')?.addEventListener('click', () => openTestModal(section.id, topic.id));
   $('btnRunTests')?.addEventListener('click', () => {
-    // Run inline quiz — reset all questions
-    $$('.test-option').forEach(o => {
-      o.disabled = false;
-      o.className = 'test-option';
-    });
-    $$('.test-explanation').forEach(e => e.classList.remove('visible'));
-    notify('Тест сброшен — отвечайте на вопросы!', 'info');
+    render(); // Просто перерисовываем панель, чтобы сбросить все состояния
+    notify('Тест сброшен', 'info');
   });
 
   const list = $('testsList');
@@ -762,9 +847,14 @@ function renderTestsPanel(section, topic, container) {
     const card = ce('div', { cls: 'test-card', id: `tc_${q.id}` });
     const history = q.history || [];
     const lastAttempts = history.slice(-5);
-    const shuffledIdx = shuffle([0,1,2,3]);
+    
+    // Поддержка и старых (число) и новых (массив) правильных ответов
+    const correctArr = Array.isArray(q.correct) ? q.correct : [q.correct];
+    
+    // Перемешиваем все доступные индексы (теперь их может быть хоть 10)
+    const indices = q.options.map((_, i) => i);
+    const shuffledIdx = shuffle(indices);
     const displayOptions = shuffledIdx.map(i => ({ text: q.options[i], origIdx: i }));
-    const newCorrectIdx = displayOptions.findIndex(o => o.origIdx === q.correct);
 
     card.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
@@ -775,7 +865,13 @@ function renderTestsPanel(section, topic, container) {
         </div>
       </div>
       <div class="test-options" id="opts_${q.id}"></div>
+      
+      <div class="test-actions" id="actions_${q.id}" style="margin-top: 12px;">
+        <button class="btn btn-primary btn-sm btn-check-test" style="width:100%">Проверить ответ</button>
+      </div>
+
       <div class="test-explanation" id="expl_${q.id}">${esc(q.explanation || '')}</div>
+      
       <div class="test-footer">
         <div class="test-history">
           ${lastAttempts.map(a => `<span class="test-attempt ${a.correct?'pass':'fail'}">${a.correct?'✓':'✗'}</span>`).join('')}
@@ -785,31 +881,70 @@ function renderTestsPanel(section, topic, container) {
     `;
 
     const optsDiv = card.querySelector(`#opts_${q.id}`);
+    
+    // Создаем кнопки вариантов
     displayOptions.forEach((opt, dispIdx) => {
-      const letters = ['A','B','C','D'];
+      // Генерируем буквы динамически (A, B, C, D, E, F...)
+      const letter = String.fromCharCode(65 + dispIdx); 
       const btn = ce('button', { cls: 'test-option' });
-      btn.innerHTML = `<span class="test-opt-letter">${letters[dispIdx]}</span><span class="test-opt-text">${esc(opt.text)}</span>`;
+      btn.dataset.origIdx = opt.origIdx; // Сохраняем реальный индекс в данные кнопки
+      
+      btn.innerHTML = `<span class="test-opt-letter">${letter}</span><span class="test-opt-text">${esc(opt.text)}</span>`;
+      
       btn.addEventListener('click', () => {
-        // Disable all options
-        optsDiv.querySelectorAll('.test-option').forEach((b, i) => {
-          b.disabled = true;
-          if (i === newCorrectIdx) b.classList.add('correct');
-        });
-        if (dispIdx !== newCorrectIdx) btn.classList.add('wrong');
-        const correct = dispIdx === newCorrectIdx;
-        // Save history
-        if (!q.history) q.history = [];
-        q.history.push({ date: today(), correct });
-        saveDB();
-        // Show explanation
-        const expl = card.querySelector(`#expl_${q.id}`);
-        if (expl && q.explanation) expl.classList.add('visible');
+        if (btn.classList.contains('correct') || btn.classList.contains('wrong') || btn.disabled) return;
+        btn.classList.toggle('selected'); // Просто выделяем/снимаем выделение
       });
+      
       optsDiv.appendChild(btn);
     });
 
-    card.querySelector(`.btn-edit-test[data-qid="${q.id}"]`)?.addEventListener('click', () => openTestModal(section.id, topic.id, q.id));
-    card.querySelector(`.btn-del-test[data-qid="${q.id}"]`)?.addEventListener('click', () => {
+    // Логика кнопки "Проверить"
+    const checkBtn = card.querySelector('.btn-check-test');
+    checkBtn.addEventListener('click', () => {
+      const selectedBtns = Array.from(optsDiv.querySelectorAll('.test-option.selected'));
+      const selectedIndices = selectedBtns.map(b => parseInt(b.dataset.origIdx));
+
+      if (selectedIndices.length === 0) {
+        notify('Выберите хотя бы один вариант', 'warning');
+        return;
+      }
+
+      // Сравниваем массивы (все ли правильные выбраны и нет ли лишних)
+      const isCorrect = selectedIndices.length === correctArr.length && 
+                        selectedIndices.every(idx => correctArr.includes(idx));
+
+      // Визуализация результатов
+      optsDiv.querySelectorAll('.test-option').forEach(btn => {
+        btn.disabled = true;
+        const idx = parseInt(btn.dataset.origIdx);
+        
+        if (correctArr.includes(idx)) {
+          btn.classList.add('correct'); // Показываем все правильные зеленым
+        }
+        if (btn.classList.contains('selected') && !correctArr.includes(idx)) {
+          btn.classList.add('wrong'); // Ошибочно выбранные — красным
+        }
+        btn.classList.remove('selected');
+      });
+
+      // Сохраняем историю
+      if (!q.history) q.history = [];
+      q.history.push({ date: today(), correct: isCorrect });
+      saveDB();
+
+      // Показываем объяснение и скрываем кнопку проверки
+      checkBtn.parentElement.style.display = 'none';
+      const expl = card.querySelector(`#expl_${q.id}`);
+      if (expl && q.explanation) expl.classList.add('visible');
+      
+      // Обновляем футер (процент успеха) без полной перерисовки страницы
+      render(); 
+    });
+
+    // Удаление и редактирование
+    card.querySelector(`.btn-edit-test`)?.addEventListener('click', () => openTestModal(section.id, topic.id, q.id));
+    card.querySelector(`.btn-del-test`)?.addEventListener('click', () => {
       if (!confirm('Удалить вопрос?')) return;
       topic.tests = tests.filter(t => t.id !== q.id);
       saveDB(); notify('Вопрос удалён'); render();
@@ -888,33 +1023,135 @@ function collectExamQuestions() {
   return shuffle(allQ).slice(0, UI.examConfig.count);
 }
 
+// function startExam() {
+//   const questions = collectExamQuestions();
+//   if (!questions.length) { notify('Нет доступных вопросов в этом разделе', 'warning'); return; }
+//   UI.examState = {
+//     questions,
+//     current: 0,
+//     answers: new Array(questions.length).fill(null),
+//     shuffledOpts: questions.map(q => {
+//       const idx = shuffle([0,1,2,3]);
+//       return { shuffledIdx: idx, newCorrect: idx.findIndex(i => i === q.correct) };
+//     }),
+//     revealed: new Array(questions.length).fill(false),
+//     finished: false,
+//     score: 0,
+//   };
+//   render();
+// }
 function startExam() {
-  const questions = collectExamQuestions();
-  if (!questions.length) { notify('Нет доступных вопросов в этом разделе', 'warning'); return; }
+  const questions = collectExamQuestions(); // Предполагаем, что эта функция у вас есть и работает
+  if (!questions.length) { 
+    notify('Нет доступных вопросов в этом разделе', 'warning'); 
+    return; 
+  }
+
   UI.examState = {
-    questions,
-    current: 0,
-    answers: new Array(questions.length).fill(null),
-    shuffledOpts: questions.map(q => {
-      const idx = shuffle([0,1,2,3]);
-      return { shuffledIdx: idx, newCorrect: idx.findIndex(i => i === q.correct) };
+    questions: questions.map(q => {
+      // 1. Создаем массив индексов [0, 1, 2, ... до конца options]
+      const indices = q.options.map((_, i) => i);
+      // 2. Перемешиваем индексы
+      const shuffledIndices = shuffle(indices);
+      // 3. Получаем массив правильных ответов (всегда как массив)
+      const correctArr = Array.isArray(q.correct) ? q.correct : [q.correct];
+      
+      return {
+        ...q,
+        // Сохраняем перемешанные тексты вариантов
+        shuffledOptions: shuffledIndices.map(i => q.options[i]),
+        // Сохраняем новые позиции правильных ответов
+        newCorrectIndices: shuffledIndices
+          .map((origIdx, newIdx) => correctArr.includes(origIdx) ? newIdx : -1)
+          .filter(idx => idx !== -1)
+      };
     }),
-    revealed: new Array(questions.length).fill(false),
-    finished: false,
+    current: 0,
+    answers: [], // Будем наполнять через push
     score: 0,
   };
   render();
 }
+// function renderExamQuestion(view) {
+//   const es = UI.examState;
+//   const qi = es.current;
+//   const q = es.questions[qi];
+//   const total = es.questions.length;
+//   const answered = es.answers[qi] !== null;
+//   const { shuffledIdx, newCorrect } = es.shuffledOpts[qi];
+//   const opts = shuffledIdx.map(i => q.options[i]);
+//   const letters = ['A','B','C','D'];
 
+//   view.innerHTML = `
+//     <div class="view-header" style="margin-bottom:8px">
+//       <div><div class="view-title">🎓 Экзамен</div></div>
+//       <button class="btn btn-ghost btn-sm" id="btnExitExam">✕ Завершить</button>
+//     </div>
+//     <div class="exam-container">
+//       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+//         <span class="exam-qnum">${q._sectionTitle} · ${q._topicTitle}</span>
+//         <span class="exam-qnum">Вопрос ${qi+1} / ${total}</span>
+//       </div>
+//       <div class="exam-progress-bar"><div class="exam-progress-fill" style="width:${((qi+1)/total*100)}%"></div></div>
+//       <div class="exam-question-card">
+//         <div class="exam-question-text">${esc(q.question)}</div>
+//         <div class="exam-options" id="examOpts"></div>
+//         ${q.explanation && es.revealed[qi] ? `<div style="margin-top:14px;padding:12px;background:var(--accent-dim);border-radius:var(--radius-md);border-left:3px solid var(--accent);font-size:12px;color:var(--text-secondary)">${esc(q.explanation)}</div>` : ''}
+//       </div>
+//       <div class="exam-nav">
+//         <button class="btn btn-secondary" id="btnExamPrev" ${qi===0?'disabled':''}>← Назад</button>
+//         ${qi < total-1
+//           ? `<button class="btn btn-primary" id="btnExamNext" ${!answered?'disabled':''}>Далее →</button>`
+//           : `<button class="btn btn-success" id="btnExamFinish" ${!answered?'disabled':''}>Завершить ✓</button>`
+//         }
+//       </div>
+//     </div>
+//   `;
+
+//   const optsDiv = $('examOpts');
+//   opts.forEach((opt, dispIdx) => {
+//     const btn = ce('button', { cls: 'exam-opt' });
+//     let cls = '';
+//     if (es.revealed[qi]) {
+//       if (dispIdx === newCorrect) cls = 'correct';
+//       else if (dispIdx === es.answers[qi] && dispIdx !== newCorrect) cls = 'wrong';
+//       btn.disabled = true;
+//     }
+//     btn.className = 'exam-opt ' + cls;
+//     if (!es.revealed[qi]) btn.disabled = false;
+//     btn.innerHTML = `<span class="exam-opt-letter">${letters[dispIdx]}</span>${esc(opt)}`;
+//     btn.addEventListener('click', () => {
+//       if (es.revealed[qi]) return;
+//       es.answers[qi] = dispIdx;
+//       es.revealed[qi] = true;
+//       if (dispIdx === newCorrect) es.score++;
+//       // Save history
+//       const origTopic = findTopic(q._sectionId, q._topicId);
+//       const origQ = origTopic?.tests?.find(t => t.id === q.id);
+//       if (origQ) {
+//         if (!origQ.history) origQ.history = [];
+//         origQ.history.push({ date: today(), correct: dispIdx === newCorrect });
+//         saveDB();
+//       }
+//       render();
+//     });
+//     optsDiv.appendChild(btn);
+//   });
+
+//   $('btnExitExam')?.addEventListener('click', () => {
+//     if (confirm('Выйти из экзамена?')) { UI.examState = null; UI.view = 'home'; render(); }
+//   });
+//   $('btnExamPrev')?.addEventListener('click', () => { es.current--; render(); });
+//   $('btnExamNext')?.addEventListener('click', () => { es.current++; render(); });
+//   $('btnExamFinish')?.addEventListener('click', () => { es.finished = true; render(); });
+// }
+/* ─── ОБНОВЛЕННЫЙ EXAM QUESTION ─── */
+/* ─── ОБНОВЛЕННЫЙ EXAM QUESTION ─── */
 function renderExamQuestion(view) {
-  const es = UI.examState;
-  const qi = es.current;
-  const q = es.questions[qi];
-  const total = es.questions.length;
-  const answered = es.answers[qi] !== null;
-  const { shuffledIdx, newCorrect } = es.shuffledOpts[qi];
-  const opts = shuffledIdx.map(i => q.options[i]);
-  const letters = ['A','B','C','D'];
+  if (!UI.examState) return;
+
+  const { questions, current } = UI.examState;
+  const q = questions[current];
 
   view.innerHTML = `
     <div class="view-header" style="margin-bottom:8px">
@@ -923,61 +1160,94 @@ function renderExamQuestion(view) {
     </div>
     <div class="exam-container">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span class="exam-qnum">${q._sectionTitle} · ${q._topicTitle}</span>
-        <span class="exam-qnum">Вопрос ${qi+1} / ${total}</span>
+        <span class="exam-qnum">${esc(q._sectionTitle)} · ${esc(q._topicTitle)}</span>
+        <span class="exam-qnum">Вопрос ${current + 1} / ${questions.length}</span>
       </div>
-      <div class="exam-progress-bar"><div class="exam-progress-fill" style="width:${((qi+1)/total*100)}%"></div></div>
-      <div class="exam-question-card">
+      <div class="exam-progress-bar">
+        <div class="exam-progress-fill" style="width:${((current + 1) / questions.length * 100)}%"></div>
+      </div>
+      
+      <div class="exam-question-card" style="margin-top: 16px;">
         <div class="exam-question-text">${esc(q.question)}</div>
-        <div class="exam-options" id="examOpts"></div>
-        ${q.explanation && es.revealed[qi] ? `<div style="margin-top:14px;padding:12px;background:var(--accent-dim);border-radius:var(--radius-md);border-left:3px solid var(--accent);font-size:12px;color:var(--text-secondary)">${esc(q.explanation)}</div>` : ''}
-      </div>
-      <div class="exam-nav">
-        <button class="btn btn-secondary" id="btnExamPrev" ${qi===0?'disabled':''}>← Назад</button>
-        ${qi < total-1
-          ? `<button class="btn btn-primary" id="btnExamNext" ${!answered?'disabled':''}>Далее →</button>`
-          : `<button class="btn btn-success" id="btnExamFinish" ${!answered?'disabled':''}>Завершить ✓</button>`
-        }
+        <div class="test-options" id="exam_opts"></div>
+        
+        <div style="margin-top: 20px;">
+          <button class="btn btn-primary" id="btnNextExam" style="width: 100%">Подтвердить ответ</button>
+        </div>
       </div>
     </div>
   `;
 
-  const optsDiv = $('examOpts');
-  opts.forEach((opt, dispIdx) => {
-    const btn = ce('button', { cls: 'exam-opt' });
-    let cls = '';
-    if (es.revealed[qi]) {
-      if (dispIdx === newCorrect) cls = 'correct';
-      else if (dispIdx === es.answers[qi] && dispIdx !== newCorrect) cls = 'wrong';
-      btn.disabled = true;
-    }
-    btn.className = 'exam-opt ' + cls;
-    if (!es.revealed[qi]) btn.disabled = false;
-    btn.innerHTML = `<span class="exam-opt-letter">${letters[dispIdx]}</span>${esc(opt)}`;
-    btn.addEventListener('click', () => {
-      if (es.revealed[qi]) return;
-      es.answers[qi] = dispIdx;
-      es.revealed[qi] = true;
-      if (dispIdx === newCorrect) es.score++;
-      // Save history
-      const origTopic = findTopic(q._sectionId, q._topicId);
-      const origQ = origTopic?.tests?.find(t => t.id === q.id);
-      if (origQ) {
-        if (!origQ.history) origQ.history = [];
-        origQ.history.push({ date: today(), correct: dispIdx === newCorrect });
-        saveDB();
-      }
-      render();
-    });
-    optsDiv.appendChild(btn);
-  });
-
   $('btnExitExam')?.addEventListener('click', () => {
     if (confirm('Выйти из экзамена?')) { UI.examState = null; UI.view = 'home'; render(); }
   });
-  $('btnExamPrev')?.addEventListener('click', () => { es.current--; render(); });
-  $('btnExamNext')?.addEventListener('click', () => { es.current++; render(); });
-  $('btnExamFinish')?.addEventListener('click', () => { es.finished = true; render(); });
+
+  const optsDiv = $('exam_opts');
+  
+  // Отрисовываем заранее перемешанные варианты
+  q.shuffledOptions.forEach((optText, i) => {
+    const btn = ce('button', { cls: 'test-option' });
+    // Сохраняем индекс варианта прямо в кнопке
+    btn.dataset.idx = i;
+    
+    btn.innerHTML = `
+      <span class="test-opt-letter">${String.fromCharCode(65 + i)}</span>
+      <span class="test-opt-text">${esc(optText)}</span>
+    `;
+    
+    btn.onclick = () => {
+      btn.classList.toggle('selected');
+    };
+    optsDiv.appendChild(btn);
+  });
+
+  $('btnNextExam').onclick = () => {
+    // Собираем индексы всех выбранных кнопок
+    const selectedBtns = Array.from(optsDiv.querySelectorAll('.test-option.selected'));
+    const selectedIndices = selectedBtns.map(b => parseInt(b.dataset.idx));
+
+    if (selectedIndices.length === 0) {
+      notify('Выберите хотя бы один вариант', 'warning');
+      return;
+    }
+
+    handleExamAnswer(selectedIndices);
+  };
+}
+function handleExamAnswer(userIndices) {
+  const { questions, current } = UI.examState;
+  const q = questions[current];
+  
+  // Правильные индексы в текущем (перемешанном) вопросе
+  const correctArr = q.newCorrectIndices;
+
+  // Проверка: количество совпадает И каждый выбранный индекс есть в списке правильных
+  const isCorrect = userIndices.length === correctArr.length && 
+                    userIndices.every(idx => correctArr.includes(idx));
+
+  UI.examState.answers.push(isCorrect);
+  if (isCorrect) UI.examState.score++;
+
+  // Сохраняем историю ответов в базу для статистики (Средний балл)
+  const origTopic = findTopic(q._sectionId, q._topicId);
+  if (origTopic) {
+    const origQ = origTopic.tests?.find(t => t.id === q.id);
+    if (origQ) {
+      if (!origQ.history) origQ.history = [];
+      origQ.history.push({ date: today(), correct: isCorrect });
+      saveDB();
+    }
+  }
+
+  UI.examState.current++;
+
+  // Если вопросы закончились, ставим флаг завершения
+  if (UI.examState.current >= questions.length) {
+    UI.examState.finished = true;
+  }
+  
+  // Вызываем глобальный render() — он сам решит показать следующий вопрос или итоги
+  render(); 
 }
 
 function renderExamResult(view) {
@@ -1671,52 +1941,280 @@ function openLinkModal(sectionId, topicId, linkId = null) {
 }
 
 /* ─── TEST MODAL ─── */
+// function openTestModal(sectionId, topicId, testId = null) {
+//   const topic = findTopic(sectionId, topicId);
+//   if (!topic) return;
+//   const test = testId ? topic.tests?.find(t => t.id === testId) : null;
+
+//   const modal = buildModal('testModal', test ? 'Редактировать вопрос' : 'Новый вопрос', `
+//     <div class="form-group">
+//       <label class="form-label">Вопрос *</label>
+//       <textarea class="form-textarea" id="qm_question" rows="2" placeholder="Текст вопроса">${esc(test?.question||'')}</textarea>
+//     </div>
+//     ${[0,1,2,3].map(i => `
+//       <div class="form-group">
+//         <label class="form-label">Вариант ${String.fromCharCode(65+i)} ${i===0?'*':''}</label>
+//         <input class="form-input" id="qm_opt${i}" value="${esc(test?.options?.[i]||'')}" placeholder="Вариант ответа ${String.fromCharCode(65+i)}">
+//       </div>
+//     `).join('')}
+//     <div class="form-group">
+//       <label class="form-label">Правильный ответ *</label>
+//       <select class="form-select" id="qm_correct">
+//         ${[0,1,2,3].map(i=>`<option value="${i}" ${test?.correct===i?'selected':''}>Вариант ${String.fromCharCode(65+i)}</option>`).join('')}
+//       </select>
+//     </div>
+//     <div class="form-group">
+//       <label class="form-label">Объяснение (показывается после ответа)</label>
+//       <textarea class="form-textarea" id="qm_expl" rows="2" placeholder="Почему этот ответ правильный...">${esc(test?.explanation||'')}</textarea>
+//     </div>
+//   `, () => {
+//     const question = $('qm_question').value.trim();
+//     const opts = [0,1,2,3].map(i => $('qm_opt'+i).value.trim());
+//     if (!question) { notify('Введите вопрос', 'error'); return; }
+//     if (opts.some(o => !o)) { notify('Заполните все варианты ответа', 'error'); return; }
+//     const correct = parseInt($('qm_correct').value);
+//     const explanation = $('qm_expl').value.trim();
+//     if (!topic.tests) topic.tests = [];
+//     if (test) {
+//       test.question = question; test.options = opts; test.correct = correct; test.explanation = explanation;
+//     } else {
+//       topic.tests.push({ id: uid(), question, options: opts, correct, explanation, history: [] });
+//     }
+//     saveDB(); closeAllModals(); notify(test ? 'Вопрос обновлён' : 'Вопрос добавлен', 'success'); render();
+//   });
+
+//   document.body.appendChild(modal);
+//   openModal('testModal');
+//   $('qm_question')?.focus();
+// }
+
+/* ─── ОБНОВЛЕННЫЙ TEST MODAL ─── */
+/* ─── ОБНОВЛЕННЫЙ TEST MODAL (С НОВЫМ ДИЗАЙНОМ) ─── */
 function openTestModal(sectionId, topicId, testId = null) {
   const topic = findTopic(sectionId, topicId);
   if (!topic) return;
   const test = testId ? topic.tests?.find(t => t.id === testId) : null;
 
+  // Новый компактный дизайн для строки варианта ответа
+  const renderOptionRow = (val = '', isCorrect = false) => `
+    <div class="option-row modern-option-row">
+      <label class="modern-option-checkbox" title="Отметить как правильный">
+        <input type="checkbox" class="qm_correct_check" ${isCorrect ? 'checked' : ''}>
+        <span class="custom-checkbox"></span>
+      </label>
+      <div class="modern-option-input-wrapper">
+        <input class="qm_opt" value="${esc(val)}" placeholder="Введите вариант ответа...">
+      </div>
+      <button type="button" class="modern-option-delete" onclick="this.parentElement.remove()" title="Удалить вариант">✕</button>
+    </div>
+  `;
+
+  const initialOptions = test?.options || ['', '', '', ''];
+  const correctArr = Array.isArray(test?.correct) ? test.correct : (test?.correct !== undefined ? [test.correct] : []);
+
   const modal = buildModal('testModal', test ? 'Редактировать вопрос' : 'Новый вопрос', `
     <div class="form-group">
       <label class="form-label">Вопрос *</label>
-      <textarea class="form-textarea" id="qm_question" rows="2" placeholder="Текст вопроса">${esc(test?.question||'')}</textarea>
+      <textarea class="form-textarea" id="qm_question" rows="2" placeholder="Текст вопроса">${esc(test?.question || '')}</textarea>
     </div>
-    ${[0,1,2,3].map(i => `
-      <div class="form-group">
-        <label class="form-label">Вариант ${String.fromCharCode(65+i)} ${i===0?'*':''}</label>
-        <input class="form-input" id="qm_opt${i}" value="${esc(test?.options?.[i]||'')}" placeholder="Вариант ответа ${String.fromCharCode(65+i)}">
-      </div>
-    `).join('')}
-    <div class="form-group">
-      <label class="form-label">Правильный ответ *</label>
-      <select class="form-select" id="qm_correct">
-        ${[0,1,2,3].map(i=>`<option value="${i}" ${test?.correct===i?'selected':''}>Вариант ${String.fromCharCode(65+i)}</option>`).join('')}
-      </select>
+    
+    <label class="form-label" style="margin-top: 12px; display: block;">Варианты ответов (отметьте правильные галочкой) *</label>
+    <div id="options_container">
+      ${initialOptions.map((opt, i) => renderOptionRow(opt, correctArr.includes(i))).join('')}
     </div>
-    <div class="form-group">
+    
+    <button type="button" id="add_option_btn" class="btn btn-secondary btn-sm" style="margin-top: 4px;">+ Добавить вариант</button>
+
+    <div class="form-group" style="margin-top: 20px;">
       <label class="form-label">Объяснение (показывается после ответа)</label>
-      <textarea class="form-textarea" id="qm_expl" rows="2" placeholder="Почему этот ответ правильный...">${esc(test?.explanation||'')}</textarea>
+      <textarea class="form-textarea" id="qm_expl" rows="2" placeholder="Почему эти ответы правильные...">${esc(test?.explanation || '')}</textarea>
     </div>
   `, () => {
+    // ЛОГИКА СОХРАНЕНИЯ
     const question = $('qm_question').value.trim();
-    const opts = [0,1,2,3].map(i => $('qm_opt'+i).value.trim());
+    const rows = document.querySelectorAll('.option-row');
+    
+    const opts = [];
+    const correct = [];
+
+    rows.forEach((row) => {
+      const text = row.querySelector('.qm_opt').value.trim();
+      const isCorrect = row.querySelector('.qm_correct_check').checked;
+      if (text) {
+        opts.push(text);
+        if (isCorrect) correct.push(opts.length - 1);
+      }
+    });
+
     if (!question) { notify('Введите вопрос', 'error'); return; }
-    if (opts.some(o => !o)) { notify('Заполните все варианты ответа', 'error'); return; }
-    const correct = parseInt($('qm_correct').value);
-    const explanation = $('qm_expl').value.trim();
+    if (opts.length < 2) { notify('Нужно минимум 2 варианта ответа', 'error'); return; }
+    if (correct.length === 0) { notify('Выберите хотя бы один правильный ответ', 'error'); return; }
+
     if (!topic.tests) topic.tests = [];
+    
+    const testData = {
+      id: test ? test.id : uid(),
+      question,
+      options: opts,
+      correct: correct,
+      explanation: $('qm_expl').value.trim(),
+      history: test ? (test.history || []) : []
+    };
+
     if (test) {
-      test.question = question; test.options = opts; test.correct = correct; test.explanation = explanation;
+      Object.assign(test, testData);
     } else {
-      topic.tests.push({ id: uid(), question, options: opts, correct, explanation, history: [] });
+      topic.tests.push(testData);
     }
+
     saveDB(); closeAllModals(); notify(test ? 'Вопрос обновлён' : 'Вопрос добавлен', 'success'); render();
   });
 
   document.body.appendChild(modal);
+  
+  $('add_option_btn').onclick = () => {
+    const container = $('options_container');
+    const div = document.createElement('div');
+    div.innerHTML = renderOptionRow();
+    container.appendChild(div.firstElementChild);
+  };
+
   openModal('testModal');
   $('qm_question')?.focus();
 }
+
+
+/* ─── ОБНОВЛЕННЫЙ EXAM QUESTION (С ОБРАТНОЙ СВЯЗЬЮ) ─── */
+function renderExamQuestion(view) {
+  if (!UI.examState) return;
+
+  const { questions, current, currentAnswerRevealed, lastSelectedIndices } = UI.examState;
+  const q = questions[current];
+  const isLastQuestion = current === questions.length - 1;
+
+  view.innerHTML = `
+    <div class="view-header" style="margin-bottom:8px">
+      <div><div class="view-title">🎓 Экзамен</div></div>
+      <button class="btn btn-ghost btn-sm" id="btnExitExam">✕ Завершить</button>
+    </div>
+    <div class="exam-container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span class="exam-qnum">${esc(q._sectionTitle)} · ${esc(q._topicTitle)}</span>
+        <span class="exam-qnum">Вопрос ${current + 1} / ${questions.length}</span>
+      </div>
+      <div class="exam-progress-bar">
+        <div class="exam-progress-fill" style="width:${((current + 1) / questions.length * 100)}%"></div>
+      </div>
+      
+      <div class="exam-question-card" style="margin-top: 16px;">
+        <div class="exam-question-text">${esc(q.question)}</div>
+        <div class="test-options" id="exam_opts"></div>
+        
+        <div class="test-explanation" id="exam_expl" style="margin-top: 16px; ${currentAnswerRevealed && q.explanation ? 'display:block; opacity:1; visibility:visible; padding:12px; background:var(--accent-dim); border-left:3px solid var(--accent); border-radius:var(--radius-md); font-size:13px;' : 'display:none;'}">
+          <strong>Объяснение:</strong><br>
+          ${esc(q.explanation || '')}
+        </div>
+        
+        <div style="margin-top: 20px;">
+          ${!currentAnswerRevealed 
+            ? `<button class="btn btn-primary" id="btnCheckExam" style="width: 100%">Подтвердить ответ</button>`
+            : `<button class="btn btn-primary" id="btnNextExam" style="width: 100%">${isLastQuestion ? 'Завершить экзамен ✓' : 'Следующий вопрос →'}</button>`
+          }
+        </div>
+      </div>
+    </div>
+  `;
+
+  $('btnExitExam')?.addEventListener('click', () => {
+    if (confirm('Выйти из экзамена?')) { UI.examState = null; UI.view = 'home'; render(); }
+  });
+
+  const optsDiv = $('exam_opts');
+  
+  q.shuffledOptions.forEach((optText, i) => {
+    const btn = ce('button', { cls: 'test-option' });
+    btn.dataset.idx = i;
+    
+    btn.innerHTML = `
+      <span class="test-opt-letter">${String.fromCharCode(65 + i)}</span>
+      <span class="test-opt-text">${esc(optText)}</span>
+    `;
+    
+    if (currentAnswerRevealed) {
+      // Режим просмотра результата ответа
+      btn.disabled = true;
+      const isCorrectAns = q.newCorrectIndices.includes(i);
+      const isSelected = lastSelectedIndices.includes(i);
+      
+      if (isCorrectAns) {
+        btn.classList.add('correct'); // Зеленый для всех правильных
+      }
+      if (isSelected && !isCorrectAns) {
+        btn.classList.add('wrong');   // Красный для ошибочно выбранных
+      }
+    } else {
+      // Режим выбора ответа
+      btn.onclick = () => btn.classList.toggle('selected');
+    }
+    
+    optsDiv.appendChild(btn);
+  });
+
+  // Логика кнопок
+  if (!currentAnswerRevealed) {
+    $('btnCheckExam').onclick = () => {
+      const selectedBtns = Array.from(optsDiv.querySelectorAll('.test-option.selected'));
+      const selectedIndices = selectedBtns.map(b => parseInt(b.dataset.idx));
+
+      if (selectedIndices.length === 0) {
+        notify('Выберите хотя бы один вариант', 'warning');
+        return;
+      }
+      handleExamAnswer(selectedIndices);
+    };
+  } else {
+    $('btnNextExam').onclick = () => {
+      UI.examState.current++;
+      UI.examState.currentAnswerRevealed = false; // Сбрасываем флаг для следующего вопроса
+      UI.examState.lastSelectedIndices = [];
+      
+      if (UI.examState.current >= questions.length) {
+        UI.examState.finished = true;
+      }
+      render();
+    };
+  }
+}
+
+/* ─── ИЗМЕНЕННЫЙ HANDLE EXAM ANSWER ─── */
+function handleExamAnswer(userIndices) {
+  const { questions, current } = UI.examState;
+  const q = questions[current];
+  
+  const correctArr = q.newCorrectIndices;
+  const isCorrect = userIndices.length === correctArr.length && 
+                    userIndices.every(idx => correctArr.includes(idx));
+
+  UI.examState.answers.push(isCorrect);
+  if (isCorrect) UI.examState.score++;
+
+  const origTopic = findTopic(q._sectionId, q._topicId);
+  if (origTopic) {
+    const origQ = origTopic.tests?.find(t => t.id === q.id);
+    if (origQ) {
+      if (!origQ.history) origQ.history = [];
+      origQ.history.push({ date: today(), correct: isCorrect });
+      saveDB();
+    }
+  }
+
+  // Вместо перехода к следующему вопросу, включаем режим "показа ответа"
+  UI.examState.currentAnswerRevealed = true;
+  UI.examState.lastSelectedIndices = userIndices;
+  
+  render(); 
+}
+
 
 /* ─── MODAL BUILDER ─── */
 function buildModal(id, title, bodyHTML, onSave) {
