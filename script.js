@@ -18,7 +18,8 @@ let UI = {
   activeTopicId: null,
   activeTab: 'notes',
   sidebarCollapsed: false,
-  examConfig: { sectionId: null, count: 10 },
+  // examConfig: { sectionId: null, count: 10 },
+  examConfig: { sectionId: null, topicId: null, count: 10 },
   examState: null,   // { questions, current, answers, score }
   editingNotes: false,
   searchQuery: '',
@@ -819,11 +820,29 @@ function renderLinksPanel(section, topic, container) {
 //   });
 // }
 /* ─── TESTS PANEL (ОБНОВЛЕННАЯ) ─── */
+// function renderTestsPanel(section, topic, container) {
+//   const panel = ce('div', { cls: 'tab-panel active' });
+//   panel.innerHTML = `
+//     <div class="tests-toolbar">
+//       <button class="btn btn-success btn-sm" id="btnRunTests">▶ Сбросить и пройти заново</button>
+//       <button class="btn btn-primary btn-sm" id="btnAddTest">+ Добавить вопрос</button>
+//     </div>
+//     <div class="tests-list" id="testsList"></div>
+//   `;
+//   container.appendChild(panel);
+
+//   $('btnAddTest')?.addEventListener('click', () => openTestModal(section.id, topic.id));
+//   $('btnRunTests')?.addEventListener('click', () => {
+//     render(); // Просто перерисовываем панель, чтобы сбросить все состояния
+//     notify('Тест сброшен', 'info');
+//   });
+/* ─── TESTS PANEL (ОБНОВЛЕННАЯ С ИМПОРТОМ) ─── */
 function renderTestsPanel(section, topic, container) {
   const panel = ce('div', { cls: 'tab-panel active' });
   panel.innerHTML = `
     <div class="tests-toolbar">
-      <button class="btn btn-success btn-sm" id="btnRunTests">▶ Сбросить и пройти заново</button>
+      <button class="btn btn-success btn-sm" id="btnRunTests">▶ Сбросить и пройти</button>
+      <button class="btn btn-secondary btn-sm" id="btnImportTests">⬇ Импорт из ИИ</button>
       <button class="btn btn-primary btn-sm" id="btnAddTest">+ Добавить вопрос</button>
     </div>
     <div class="tests-list" id="testsList"></div>
@@ -831,8 +850,9 @@ function renderTestsPanel(section, topic, container) {
   container.appendChild(panel);
 
   $('btnAddTest')?.addEventListener('click', () => openTestModal(section.id, topic.id));
+  $('btnImportTests')?.addEventListener('click', () => openImportTestsModal(section.id, topic.id)); // Новая кнопка
   $('btnRunTests')?.addEventListener('click', () => {
-    render(); // Просто перерисовываем панель, чтобы сбросить все состояния
+    render(); 
     notify('Тест сброшен', 'info');
   });
 
@@ -969,8 +989,50 @@ function renderExamView() {
   }
 }
 
+// function renderExamSetup(view) {
+//   const counts = [10, 20, 35, 50];
+//   view.innerHTML = `
+//     <div class="view-header">
+//       <div><div class="view-title">🎓 Экзамен</div><div class="view-subtitle">Проверьте свои знания</div></div>
+//       <button class="btn btn-ghost btn-sm" id="backFromExam">← Назад</button>
+//     </div>
+//     <div class="exam-container">
+//       <div class="exam-setup-card">
+//         <div class="exam-setup-icon">🎓</div>
+//         <div class="exam-setup-title">Настройка экзамена</div>
+//         <div class="exam-setup-desc">Выберите раздел и количество вопросов</div>
+//         <div class="mb-16" style="text-align:left">
+//           <div class="form-group">
+//             <label class="form-label">Раздел</label>
+//             <select class="form-select" id="examSection">
+//               <option value="">Все разделы</option>
+//               ${DB.sections.map(s => `<option value="${s.id}" ${UI.examConfig.sectionId===s.id?'selected':''}>${esc(s.title)}</option>`).join('')}
+//             </select>
+//           </div>
+//         </div>
+//         <div class="exam-options-row">
+//           ${counts.map(n => `<div class="exam-option-card ${UI.examConfig.count===n?'selected':''}" data-count="${n}"><div class="exam-option-n">${n}</div><div class="exam-option-label">вопросов</div></div>`).join('')}
+//         </div>
+//         <button class="btn btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:12px" id="btnStartExam">Начать экзамен →</button>
+//       </div>
+//     </div>
+//   `;
+
+//   $('backFromExam')?.addEventListener('click', () => { UI.view = UI.activeSectionId ? 'section' : 'home'; render(); });
+//   $('examSection')?.addEventListener('change', e => { UI.examConfig.sectionId = e.target.value || null; });
+//   $$('.exam-option-card').forEach(c => {
+//     c.addEventListener('click', () => {
+//       $$('.exam-option-card').forEach(x => x.classList.remove('selected'));
+//       c.classList.add('selected');
+//       UI.examConfig.count = parseInt(c.dataset.count);
+//     });
+//   });
+//   $('btnStartExam')?.addEventListener('click', startExam);
+// }
 function renderExamSetup(view) {
   const counts = [10, 20, 35, 50];
+  const selectedSection = UI.examConfig.sectionId ? findSection(UI.examConfig.sectionId) : null;
+
   view.innerHTML = `
     <div class="view-header">
       <div><div class="view-title">🎓 Экзамен</div><div class="view-subtitle">Проверьте свои знания</div></div>
@@ -980,16 +1042,28 @@ function renderExamSetup(view) {
       <div class="exam-setup-card">
         <div class="exam-setup-icon">🎓</div>
         <div class="exam-setup-title">Настройка экзамена</div>
-        <div class="exam-setup-desc">Выберите раздел и количество вопросов</div>
-        <div class="mb-16" style="text-align:left">
-          <div class="form-group">
+        <div class="exam-setup-desc">Выберите раздел, тему и количество вопросов</div>
+        
+        <div class="mb-16" style="text-align:left; display:flex; flex-direction:column; gap:12px;">
+          <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label">Раздел</label>
             <select class="form-select" id="examSection">
               <option value="">Все разделы</option>
               ${DB.sections.map(s => `<option value="${s.id}" ${UI.examConfig.sectionId===s.id?'selected':''}>${esc(s.title)}</option>`).join('')}
             </select>
           </div>
+
+          ${selectedSection ? `
+          <div class="form-group" style="margin-bottom: 0; animation: fadeIn 0.3s ease;">
+            <label class="form-label">Тема</label>
+            <select class="form-select" id="examTopic">
+              <option value="">Все темы раздела</option>
+              ${(selectedSection.topics||[]).map(t => `<option value="${t.id}" ${UI.examConfig.topicId===t.id?'selected':''}>${esc(t.title)}</option>`).join('')}
+            </select>
+          </div>
+          ` : ''}
         </div>
+
         <div class="exam-options-row">
           ${counts.map(n => `<div class="exam-option-card ${UI.examConfig.count===n?'selected':''}" data-count="${n}"><div class="exam-option-n">${n}</div><div class="exam-option-label">вопросов</div></div>`).join('')}
         </div>
@@ -999,7 +1073,19 @@ function renderExamSetup(view) {
   `;
 
   $('backFromExam')?.addEventListener('click', () => { UI.view = UI.activeSectionId ? 'section' : 'home'; render(); });
-  $('examSection')?.addEventListener('change', e => { UI.examConfig.sectionId = e.target.value || null; });
+  
+  // Обработчик раздела
+  $('examSection')?.addEventListener('change', e => { 
+    UI.examConfig.sectionId = e.target.value || null; 
+    UI.examConfig.topicId = null; // Сбрасываем выбранную тему при смене раздела
+    render(); // Перерисовываем интерфейс, чтобы показать новые темы
+  });
+
+  // Обработчик темы
+  $('examTopic')?.addEventListener('change', e => {
+    UI.examConfig.topicId = e.target.value || null;
+  });
+
   $$('.exam-option-card').forEach(c => {
     c.addEventListener('click', () => {
       $$('.exam-option-card').forEach(x => x.classList.remove('selected'));
@@ -1007,21 +1093,22 @@ function renderExamSetup(view) {
       UI.examConfig.count = parseInt(c.dataset.count);
     });
   });
+  
   $('btnStartExam')?.addEventListener('click', startExam);
 }
 
-function collectExamQuestions() {
-  const sections = UI.examConfig.sectionId
-    ? DB.sections.filter(s => s.id === UI.examConfig.sectionId)
-    : DB.sections;
-  const allQ = [];
-  sections.forEach(s => {
-    (s.topics||[]).forEach(t => {
-      (t.tests||[]).forEach(q => allQ.push({ ...q, _topicTitle: t.title, _sectionTitle: s.title, _topicId: t.id, _sectionId: s.id }));
-    });
-  });
-  return shuffle(allQ).slice(0, UI.examConfig.count);
-}
+// function collectExamQuestions() {
+//   const sections = UI.examConfig.sectionId
+//     ? DB.sections.filter(s => s.id === UI.examConfig.sectionId)
+//     : DB.sections;
+//   const allQ = [];
+//   sections.forEach(s => {
+//     (s.topics||[]).forEach(t => {
+//       (t.tests||[]).forEach(q => allQ.push({ ...q, _topicTitle: t.title, _sectionTitle: s.title, _topicId: t.id, _sectionId: s.id }));
+//     });
+//   });
+//   return shuffle(allQ).slice(0, UI.examConfig.count);
+// }
 
 // function startExam() {
 //   const questions = collectExamQuestions();
@@ -1040,6 +1127,33 @@ function collectExamQuestions() {
 //   };
 //   render();
 // }
+function collectExamQuestions() {
+  const sections = UI.examConfig.sectionId
+    ? DB.sections.filter(s => s.id === UI.examConfig.sectionId)
+    : DB.sections;
+    
+  const allQ = [];
+  
+  sections.forEach(s => {
+    // Если выбрана конкретная тема, фильтруем топики
+    const topics = UI.examConfig.topicId
+      ? (s.topics || []).filter(t => t.id === UI.examConfig.topicId)
+      : (s.topics || []);
+
+    topics.forEach(t => {
+      (t.tests||[]).forEach(q => allQ.push({ 
+        ...q, 
+        _topicTitle: t.title, 
+        _sectionTitle: s.title, 
+        _topicId: t.id, 
+        _sectionId: s.id 
+      }));
+    });
+  });
+  
+  return shuffle(allQ).slice(0, UI.examConfig.count);
+}
+
 function startExam() {
   const questions = collectExamQuestions(); // Предполагаем, что эта функция у вас есть и работает
   if (!questions.length) { 
@@ -2082,9 +2196,176 @@ function openTestModal(sectionId, topicId, testId = null) {
   openModal('testModal');
   $('qm_question')?.focus();
 }
+/* ─── IMPORT TESTS MODAL (ДЛЯ НЕЙРОСЕТЕЙ) ─── */
+function openImportTestsModal(sectionId, topicId) {
+  const topic = findTopic(sectionId, topicId);
+  if (!topic) return;
+
+  const modal = buildModal('importTestsModal', 'Импорт вопросов (JSON)', `
+    <div class="form-group">
+      <label class="form-label">Вставьте JSON от нейросети *</label>
+      <textarea class="form-textarea" id="im_tests_json" rows="12" style="font-family: monospace; font-size: 13px; white-space: pre;" placeholder='[
+  {
+    "question": "Текст вопроса?",
+    "options": ["Вариант А", "Вариант Б", "Вариант В"],
+    "correct": [0],
+    "explanation": "Объяснение ответа"
+  }
+]'></textarea>
+    </div>
+    <div class="form-hint" style="margin-top: 8px;">
+      Скопируйте специальный промпт для нейросети, чтобы она выдала правильный формат.
+    </div>
+  `, () => {
+    const val = $('im_tests_json').value.trim();
+    if (!val) { notify('Вставьте код', 'error'); return; }
+    
+    try {
+      // Пытаемся прочитать JSON
+      const parsed = JSON.parse(val);
+      if (!Array.isArray(parsed)) throw new Error('Код должен начинаться с [ и заканчиваться ] (массив)');
+
+      let added = 0;
+      if (!topic.tests) topic.tests = [];
+
+      // Проходим по каждому вопросу от ИИ
+      parsed.forEach(item => {
+        // Базовая валидация: есть вопрос, есть варианты, есть правильные ответы
+        if (item.question && Array.isArray(item.options) && Array.isArray(item.correct)) {
+          topic.tests.push({
+            id: uid(), // Генерируем уникальный ID для каждого
+            question: item.question,
+            options: item.options,
+            correct: item.correct, // Массив индексов (например [0, 2])
+            explanation: item.explanation || '',
+            history: []
+          });
+          added++;
+        }
+      });
+
+      if (added > 0) {
+        saveDB(); 
+        closeAllModals(); 
+        notify(`Успешно добавлено вопросов: ${added}`, 'success'); 
+        render();
+      } else {
+        notify('Формат верный, но вопросы не найдены. Проверьте структуру.', 'warning');
+      }
+    } catch (e) {
+      notify('Ошибка чтения JSON: проверьте, нет ли лишних символов.', 'error');
+      console.error(e);
+    }
+  });
+
+  document.body.appendChild(modal);
+  openModal('importTestsModal');
+}
 
 
 /* ─── ОБНОВЛЕННЫЙ EXAM QUESTION (С ОБРАТНОЙ СВЯЗЬЮ) ─── */
+// function renderExamQuestion(view) {
+//   if (!UI.examState) return;
+
+//   const { questions, current, currentAnswerRevealed, lastSelectedIndices } = UI.examState;
+//   const q = questions[current];
+//   const isLastQuestion = current === questions.length - 1;
+
+//   view.innerHTML = `
+//     <div class="view-header" style="margin-bottom:8px">
+//       <div><div class="view-title">🎓 Экзамен</div></div>
+//       <button class="btn btn-ghost btn-sm" id="btnExitExam">✕ Завершить</button>
+//     </div>
+//     <div class="exam-container">
+//       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+//         <span class="exam-qnum">${esc(q._sectionTitle)} · ${esc(q._topicTitle)}</span>
+//         <span class="exam-qnum">Вопрос ${current + 1} / ${questions.length}</span>
+//       </div>
+//       <div class="exam-progress-bar">
+//         <div class="exam-progress-fill" style="width:${((current + 1) / questions.length * 100)}%"></div>
+//       </div>
+      
+//       <div class="exam-question-card" style="margin-top: 16px;">
+//         <div class="exam-question-text">${esc(q.question)}</div>
+//         <div class="test-options" id="exam_opts"></div>
+        
+//         <div class="test-explanation" id="exam_expl" style="margin-top: 16px; ${currentAnswerRevealed && q.explanation ? 'display:block; opacity:1; visibility:visible; padding:12px; background:var(--accent-dim); border-left:3px solid var(--accent); border-radius:var(--radius-md); font-size:13px;' : 'display:none;'}">
+//           <strong>Объяснение:</strong><br>
+//           ${esc(q.explanation || '')}
+//         </div>
+        
+//         <div style="margin-top: 20px;">
+//           ${!currentAnswerRevealed 
+//             ? `<button class="btn btn-primary" id="btnCheckExam" style="width: 100%">Подтвердить ответ</button>`
+//             : `<button class="btn btn-primary" id="btnNextExam" style="width: 100%">${isLastQuestion ? 'Завершить экзамен ✓' : 'Следующий вопрос →'}</button>`
+//           }
+//         </div>
+//       </div>
+//     </div>
+//   `;
+
+//   $('btnExitExam')?.addEventListener('click', () => {
+//     if (confirm('Выйти из экзамена?')) { UI.examState = null; UI.view = 'home'; render(); }
+//   });
+
+//   const optsDiv = $('exam_opts');
+  
+//   q.shuffledOptions.forEach((optText, i) => {
+//     const btn = ce('button', { cls: 'test-option' });
+//     btn.dataset.idx = i;
+    
+//     btn.innerHTML = `
+//       <span class="test-opt-letter">${String.fromCharCode(65 + i)}</span>
+//       <span class="test-opt-text">${esc(optText)}</span>
+//     `;
+    
+//     if (currentAnswerRevealed) {
+//       // Режим просмотра результата ответа
+//       btn.disabled = true;
+//       const isCorrectAns = q.newCorrectIndices.includes(i);
+//       const isSelected = lastSelectedIndices.includes(i);
+      
+//       if (isCorrectAns) {
+//         btn.classList.add('correct'); // Зеленый для всех правильных
+//       }
+//       if (isSelected && !isCorrectAns) {
+//         btn.classList.add('wrong');   // Красный для ошибочно выбранных
+//       }
+//     } else {
+//       // Режим выбора ответа
+//       btn.onclick = () => btn.classList.toggle('selected');
+//     }
+    
+//     optsDiv.appendChild(btn);
+//   });
+
+//   // Логика кнопок
+//   if (!currentAnswerRevealed) {
+//     $('btnCheckExam').onclick = () => {
+//       const selectedBtns = Array.from(optsDiv.querySelectorAll('.test-option.selected'));
+//       const selectedIndices = selectedBtns.map(b => parseInt(b.dataset.idx));
+
+//       if (selectedIndices.length === 0) {
+//         notify('Выберите хотя бы один вариант', 'warning');
+//         return;
+//       }
+//       handleExamAnswer(selectedIndices);
+//     };
+//   } else {
+//     $('btnNextExam').onclick = () => {
+//       UI.examState.current++;
+//       UI.examState.currentAnswerRevealed = false; // Сбрасываем флаг для следующего вопроса
+//       UI.examState.lastSelectedIndices = [];
+      
+//       if (UI.examState.current >= questions.length) {
+//         UI.examState.finished = true;
+//       }
+//       render();
+//     };
+//   }
+// }
+
+/* ─── ОБНОВЛЕННЫЙ EXAM QUESTION (С УМНОЙ ОБРАТНОЙ СВЯЗЬЮ) ─── */
 function renderExamQuestion(view) {
   if (!UI.examState) return;
 
@@ -2092,11 +2373,56 @@ function renderExamQuestion(view) {
   const q = questions[current];
   const isLastQuestion = current === questions.length - 1;
 
+  // Переменные для текста и цвета обратной связи
+  let feedbackMsg = '';
+  let feedbackColor = '';
+  let isPerfectMatch = false;
+  let hasIncorrect = false;
+  let hasMissed = false;
+
+  // Анализируем ответ, если он уже дан
+  if (currentAnswerRevealed) {
+    const correctArr = q.newCorrectIndices;
+    const selectedArr = lastSelectedIndices || [];
+
+    // 1. Выбраны ВСЕ правильные и НИ ОДНОГО неправильного
+    isPerfectMatch = selectedArr.length === correctArr.length && selectedArr.every(i => correctArr.includes(i));
+    // 2. Выбран хотя бы один НЕПРАВИЛЬНЫЙ вариант
+    hasIncorrect = selectedArr.some(i => !correctArr.includes(i));
+    // 3. Выбраны только правильные, но НЕ ВСЕ
+    hasMissed = correctArr.some(i => !selectedArr.includes(i)) && !hasIncorrect;
+
+    if (isPerfectMatch) {
+      feedbackMsg = '✅ Абсолютно верно!';
+      feedbackColor = '#10b981'; // Зеленый
+    } else if (hasIncorrect) {
+      feedbackMsg = '❌ Некоторые варианты выбраны неверно.';
+      feedbackColor = '#ef4444'; // Красный
+    } else if (hasMissed) {
+      feedbackMsg = '⚠️ Выбраны не все правильные варианты.';
+      feedbackColor = '#f59e0b'; // Оранжевый
+    }
+  }
+
   view.innerHTML = `
+    <style>
+      /* Добавляем стили для оранжевого "неполного" ответа */
+      .test-option.warning {
+        border-color: #f59e0b !important;
+        background: rgba(245, 158, 11, 0.1) !important;
+      }
+      .test-option.warning .test-opt-letter {
+        background: #f59e0b !important;
+        color: #fff !important;
+        border-color: #f59e0b !important;
+      }
+    </style>
+    
     <div class="view-header" style="margin-bottom:8px">
       <div><div class="view-title">🎓 Экзамен</div></div>
       <button class="btn btn-ghost btn-sm" id="btnExitExam">✕ Завершить</button>
     </div>
+    
     <div class="exam-container">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span class="exam-qnum">${esc(q._sectionTitle)} · ${esc(q._topicTitle)}</span>
@@ -2110,10 +2436,14 @@ function renderExamQuestion(view) {
         <div class="exam-question-text">${esc(q.question)}</div>
         <div class="test-options" id="exam_opts"></div>
         
-        <div class="test-explanation" id="exam_expl" style="margin-top: 16px; ${currentAnswerRevealed && q.explanation ? 'display:block; opacity:1; visibility:visible; padding:12px; background:var(--accent-dim); border-left:3px solid var(--accent); border-radius:var(--radius-md); font-size:13px;' : 'display:none;'}">
-          <strong>Объяснение:</strong><br>
-          ${esc(q.explanation || '')}
-        </div>
+        ${currentAnswerRevealed ? `
+          <div style="margin-top: 16px; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-md); border-left: 4px solid ${feedbackColor}; animation: fadeIn 0.3s ease;">
+            <div style="font-weight: bold; color: ${feedbackColor}; margin-bottom: ${q.explanation ? '8px' : '0'}">
+              ${feedbackMsg}
+            </div>
+            ${q.explanation ? `<div style="font-size: 13px; color: var(--text-main);"><strong>Объяснение:</strong><br>${esc(q.explanation)}</div>` : ''}
+          </div>
+        ` : ''}
         
         <div style="margin-top: 20px;">
           ${!currentAnswerRevealed 
@@ -2141,17 +2471,23 @@ function renderExamQuestion(view) {
     `;
     
     if (currentAnswerRevealed) {
-      // Режим просмотра результата ответа
       btn.disabled = true;
       const isCorrectAns = q.newCorrectIndices.includes(i);
       const isSelected = lastSelectedIndices.includes(i);
       
-      if (isCorrectAns) {
-        btn.classList.add('correct'); // Зеленый для всех правильных
+      // ЛОГИКА РАСКРАСКИ КНОПОК
+      if (isPerfectMatch) {
+        if (isCorrectAns) btn.classList.add('correct'); // Всё идеально - зеленые
+      } else if (hasIncorrect) {
+        if (isSelected && !isCorrectAns) btn.classList.add('wrong'); // Выбрал ошибку - красная
+        if (isCorrectAns) btn.classList.add('correct'); // Показываем правильные - зелеными
+      } else if (hasMissed) {
+        if (isCorrectAns) btn.classList.add('warning'); // Забыл выбрать - оранжевые
       }
-      if (isSelected && !isCorrectAns) {
-        btn.classList.add('wrong');   // Красный для ошибочно выбранных
-      }
+
+      // Сохраняем визуальное выделение рамкой для тех, куда кликал юзер
+      if (isSelected) btn.classList.add('selected');
+
     } else {
       // Режим выбора ответа
       btn.onclick = () => btn.classList.toggle('selected');
@@ -2160,7 +2496,7 @@ function renderExamQuestion(view) {
     optsDiv.appendChild(btn);
   });
 
-  // Логика кнопок
+  // Обработчики кнопок
   if (!currentAnswerRevealed) {
     $('btnCheckExam').onclick = () => {
       const selectedBtns = Array.from(optsDiv.querySelectorAll('.test-option.selected'));
@@ -2170,12 +2506,13 @@ function renderExamQuestion(view) {
         notify('Выберите хотя бы один вариант', 'warning');
         return;
       }
+      // handleExamAnswer уже есть у вас в коде, он обработает данные
       handleExamAnswer(selectedIndices);
     };
   } else {
     $('btnNextExam').onclick = () => {
       UI.examState.current++;
-      UI.examState.currentAnswerRevealed = false; // Сбрасываем флаг для следующего вопроса
+      UI.examState.currentAnswerRevealed = false; // Сбрасываем флаг
       UI.examState.lastSelectedIndices = [];
       
       if (UI.examState.current >= questions.length) {
